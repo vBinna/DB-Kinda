@@ -1,28 +1,14 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { supabase } from '../../lib/supabase';
 
 export default function CollectionsPage() {
-  return (
-    <main className="min-h-screen p-6 md:p-10">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-8 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-slate-500">DB Kinda</p>
-            <h1 className="mt-1 text-3xl font-bold text-slate-900">المجموعات</h1>
-            <p className="mt-2 text-slate-600">تنظيم المنتجات حسب المجموعات التي وصلت منها.</p>
-          </div>
-          <Link href="/" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">الرئيسية</Link>
-        </div>
-        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900">قائمة المجموعات</h2>
-              <p className="mt-1 text-sm text-slate-500">كل مجموعة تمثل مصدرًا أو دفعة للمنتجات.</p>
-            </div>
-            <button className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800">إضافة مجموعة</button>
-          </div>
-          <div className="mt-8 rounded-xl border border-dashed border-slate-300 p-12 text-center text-slate-400">لا توجد مجموعات مضافة حتى الآن.</div>
-        </section>
-      </div>
-    </main>
-  );
+  const [collections, setCollections] = useState([]); const [name, setName] = useState(''); const [description, setDescription] = useState(''); const [showForm, setShowForm] = useState(false); const [error, setError] = useState('');
+  async function load() { const { data, error: e } = await supabase.from('collections').select('*, products(count)').order('created_at', { ascending: false }); if (e) setError(e.message); else setCollections(data || []); }
+  useEffect(() => { load(); }, []);
+  async function addCollection(e) { e.preventDefault(); setError(''); const { error: e2 } = await supabase.from('collections').insert({ name: name.trim(), description: description.trim() || null }); if (e2) setError(e2.message); else { setName(''); setDescription(''); setShowForm(false); load(); } }
+  async function removeCollection(id) { if (!confirm('هل تريد حذف هذه المجموعة؟')) return; const { error: e } = await supabase.from('collections').delete().eq('id', id); if (e) setError(e.message); else load(); }
+  return <main className="min-h-screen p-6 md:p-10"><div className="mx-auto max-w-6xl"><div className="mb-8 flex items-center justify-between gap-4"><div><p className="text-sm font-medium text-slate-500">DB Kinda</p><h1 className="mt-1 text-3xl font-bold text-slate-900">المجموعات</h1><p className="mt-2 text-slate-600">تنظيم المنتجات حسب المجموعات التي وصلت منها.</p></div><Link href="/" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700">الرئيسية</Link></div><section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"><div className="flex items-center justify-between gap-4"><div><h2 className="text-xl font-semibold text-slate-900">قائمة المجموعات</h2><p className="mt-1 text-sm text-slate-500">كل مجموعة تمثل مصدرًا أو دفعة للمنتجات.</p></div><button onClick={()=>setShowForm(!showForm)} className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white">{showForm?'إلغاء':'إضافة مجموعة'}</button></div>{showForm&&<form onSubmit={addCollection} className="mt-6 grid gap-3 md:grid-cols-3"><input required placeholder="اسم المجموعة" value={name} onChange={e=>setName(e.target.value)} className="rounded-xl border border-slate-200 px-4 py-3 text-sm"/><input placeholder="الوصف" value={description} onChange={e=>setDescription(e.target.value)} className="rounded-xl border border-slate-200 px-4 py-3 text-sm"/><button className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white">حفظ المجموعة</button></form>}{error&&<div className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</div>}<div className="mt-8 grid gap-4 md:grid-cols-2">{collections.length===0?<div className="rounded-xl border border-dashed border-slate-300 p-12 text-center text-slate-400 md:col-span-2">لا توجد مجموعات مضافة حتى الآن.</div>:collections.map(c=><article key={c.id} className="rounded-xl border border-slate-200 p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-semibold text-slate-900">{c.name}</h3><p className="mt-1 text-sm text-slate-500">{c.description||'بدون وصف'}</p><p className="mt-3 text-sm text-slate-600">عدد المنتجات: {c.products?.[0]?.count ?? 0}</p></div><button onClick={()=>removeCollection(c.id)} className="text-sm text-red-600">حذف</button></div></article>)}</div></section></div></main>;
 }
